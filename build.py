@@ -3,7 +3,6 @@
 # This is the InfluxDB build script.
 #
 # Current caveats:
-#   - Does not currently build ARM builds/packages
 #   - Does not checkout the correct commit/branch (for now, you will need to do so manually)
 #   - Has external dependencies for packaging (fpm) and uploading (boto)
 #
@@ -81,7 +80,6 @@ targets = {
 }
 
 supported_builds = {
-    # TODO(rossmcdonald): Add support for multiple GOARM values
     'darwin': [ "amd64", "386" ],
     # Windows is not currently supported in InfluxDB 0.9.5 due to use of mmap
     # 'windows': [ "amd64", "386", "arm" ],
@@ -248,7 +246,8 @@ def build(version=None,
           rc=None,
           race=False,
           clean=False,
-          outdir="."):
+          outdir=".",
+          goarm_version="6"):
     print "-------------------------"
     print ""
     print "Build plan:"
@@ -278,10 +277,11 @@ def build(version=None,
     for b, c in targets.iteritems():
         print "\t- Building '{}'...".format(os.path.join(outdir, b)),
         build_command = ""
-        build_command += "GOOS={} GOOARCH={} ".format(platform, arch)
-        if arch == "arm":
-            # TODO(rossmcdonald): Add GOARM variables for ARM builds
-            build_command += "GOOARM={} ".format(6)
+        build_command += "GOOS={} GOARCH={} ".format(platform, arch)
+        if arch == "arm" and goarm_version:
+            if goarm_version not in ["5", "6", "7", "arm64"]:
+                print "!! Invalid ARM build version: {}".format(goarm_version)
+            build_command += "GOARM={} ".format(goarm_version)
         build_command += "go build -o {} ".format(os.path.join(outdir, b))
         if race:
             build_command += "-race "
@@ -448,6 +448,7 @@ def print_usage():
     print "Options:"
     print "\t --outdir=<path> \n\t\t- Send build output to a specified path. Defaults to ./build."
     print "\t --arch=<arch> \n\t\t- Build for specified architecture. Acceptable values: x86_64|amd64, 386, arm, or all"
+    print "\t --goarm=<arm version> \n\t\t- Build for specified ARM version (when building for ARM). Default value is: 6"
     print "\t --platform=<platform> \n\t\t- Build for specified platform. Acceptable values: linux, windows, darwin, or all"
     print "\t --version=<version> \n\t\t- Version information to apply to build metadata. If not specified, will be pulled from repo tag."
     print "\t --commit=<commit> \n\t\t- Use specific commit for build (currently a NOOP)."
@@ -481,6 +482,7 @@ def main():
     upload = False
     test = False
     iteration = 1
+    goarm_version = "6"
     
     for arg in sys.argv[1:]:
         if '--outdir' in arg:
@@ -527,6 +529,9 @@ def main():
             clean = True
         elif '--iteration' in arg:
             iteration = arg.split("=")[1]
+        elif '--goarm' in arg:
+            # Signifies GOARM flag to pass to build command when compiling for ARM
+            goarm_version = arg.split("=")[1]
         elif '--help' in arg:
             print_usage()
             return 0
@@ -598,7 +603,8 @@ def main():
                   rc=rc,
                   race=race,
                   clean=clean,
-                  outdir=od)
+                  outdir=od,
+                  goarm_version=goarm_version)
             build_output.get(platform).update( { arch : od } )
 
     # Build packages
