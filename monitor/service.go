@@ -19,7 +19,11 @@ import (
 const leaderWaitTimeout = 30 * time.Second
 
 const (
-	MonitorRetentionPolicy         = "monitor"
+	// MonitorRetentionPolicy is the default monitor retention policy name
+	MonitorRetentionPolicy = "monitor"
+
+	// MonitorRetentionPolicyDuration is the default monitor retention policy duration
+	// in hours.
 	MonitorRetentionPolicyDuration = 7 * 24 * time.Hour
 )
 
@@ -50,6 +54,8 @@ type Diagnostic struct {
 	Rows    [][]interface{}
 }
 
+// NewDiagnostic returns a new instance of Diagnostic with specified column headers
+// and empty rows.
 func NewDiagnostic(columns []string) *Diagnostic {
 	return &Diagnostic{
 		Columns: columns,
@@ -57,6 +63,7 @@ func NewDiagnostic(columns []string) *Diagnostic {
 	}
 }
 
+// AddRow adds a row to a Diagnostic instance.
 func (d *Diagnostic) AddRow(r []interface{}) {
 	d.Rows = append(d.Rows, r)
 }
@@ -172,7 +179,7 @@ func (m *Monitor) DeregisterDiagnosticsClient(name string) {
 // Statistics returns the combined statistics for all expvar data. The given
 // tags are added to each of the returned statistics.
 func (m *Monitor) Statistics(tags map[string]string) ([]*Statistic, error) {
-	statistics := make([]*Statistic, 0)
+	var statistics []*Statistic
 
 	expvar.Do(func(kv expvar.KeyValue) {
 		// Skip built-in expvar stats.
@@ -281,6 +288,7 @@ func (m *Monitor) Statistics(tags map[string]string) ([]*Statistic, error) {
 	return statistics, nil
 }
 
+// Diagnostics returns the list of registered diagnostics.
 func (m *Monitor) Diagnostics() (map[string]*Diagnostic, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -412,7 +420,7 @@ func newStatistic(name string, tags map[string]string, values map[string]interfa
 // valueNames returns a sorted list of the value names, if any.
 func (s *Statistic) valueNames() []string {
 	a := make([]string, 0, len(s.Values))
-	for k, _ := range s.Values {
+	for k := range s.Values {
 		a = append(a, k)
 	}
 	sort.Strings(a)
@@ -423,7 +431,7 @@ func (s *Statistic) valueNames() []string {
 func DiagnosticFromMap(m map[string]interface{}) *Diagnostic {
 	// Display columns in deterministic order.
 	sortedKeys := make([]string, 0, len(m))
-	for k, _ := range m {
+	for k := range m {
 		sortedKeys = append(sortedKeys, k)
 	}
 	sort.Strings(sortedKeys)
