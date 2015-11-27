@@ -12,7 +12,7 @@ import (
 func Run(c *Config) {
 	w := NewWriter(&c.Write.PointGenerators.Basic, &c.Write.InfluxClients.Basic)
 	r := NewQuerier(&c.Read.QueryGenerators.Basic, &c.Read.QueryClients.Basic)
-	s := NewStressTest(&c.Provision.Basic, w, r)
+	s := NewTest(&c.Provision.Basic, w, r)
 
 	s.Start(BasicWriteHandler, BasicReadHandler)
 }
@@ -254,12 +254,12 @@ type Provisioner interface {
 }
 
 /////////////////////////////////
-// Definition of StressTest /////
+// Definition of Test /////
 /////////////////////////////////
 
-// StressTest is a struct that contains all of
+// Test is a struct that contains all of
 // the logic required to execute a Stress Test
-type StressTest struct {
+type Test struct {
 	Provisioner
 	Writer
 	Querier
@@ -269,7 +269,7 @@ type StressTest struct {
 type responseHandler func(r <-chan response, t *Timer)
 
 // Start executes the Stress Test
-func (s *StressTest) Start(wHandle responseHandler, rHandle responseHandler) {
+func (s *Test) Start(wHandle responseHandler, rHandle responseHandler) {
 	var wg sync.WaitGroup
 
 	// Provision the Instance
@@ -332,9 +332,9 @@ func (s *StressTest) Start(wHandle responseHandler, rHandle responseHandler) {
 	wg.Wait()
 }
 
-// NewStressTest returns an instance of a StressTest
-func NewStressTest(p Provisioner, w Writer, r Querier) StressTest {
-	s := StressTest{
+// NewTest returns an instance of a Test
+func NewTest(p Provisioner, w Writer, r Querier) Test {
+	s := Test{
 		Provisioner: p,
 		Writer:      w,
 		Querier:     r,
